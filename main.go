@@ -11,5 +11,5 @@ func main() {
 		log.Fatalf("Unable to connect to Ethereum RPC server")
 	}
 
-	tenderly.Trace("0x9b351a31c4fdbce74bbda251d195625c78a76f085b93d8a15d7bc9fa2421d829")
+	tenderly.Trace("0x2c0c228f4d182185b9f11cc3e85a08baf60ef44fa19a948f06826584a1449f8e")
 }
