@@ -1,7 +1,9 @@
 package vm
 
 import (
+	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/tenderly/tenderly-trace/ethereum/core/types"
 	"math/big"
 )
 
@@ -24,10 +26,12 @@ type Contract struct {
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
-	Code     []byte
-	CodeHash common.Hash
-	CodeAddr *common.Address
-	Input    []byte
+	Ast            types.Ast
+	StateVariables []*types.Node
+	Code           []byte
+	CodeHash       common.Hash
+	CodeAddr       *common.Address
+	Input          []byte
 
 	Gas   uint64
 	value *big.Int
@@ -110,6 +114,26 @@ func (c *Contract) Value() *big.Int {
 	return c.value
 }
 
+// ContractAst returns the contracts ast
+func (c *Contract) ContractAst(pc uint) []byte {
+	jast, err := json.Marshal(c.Ast[pc])
+	if err != nil {
+		return []byte{}
+	}
+
+	return jast
+}
+
+// ContractStateVariables returns the contracts state variables
+func (c *Contract) ContractStateVariables() []byte {
+	jast, err := json.Marshal(c.StateVariables)
+	if err != nil {
+		return []byte{}
+	}
+
+	return jast
+}
+
 // SetCode sets the code to the contract
 func (c *Contract) SetCode(hash common.Hash, code []byte) {
 	c.Code = code
@@ -118,8 +142,10 @@ func (c *Contract) SetCode(hash common.Hash, code []byte) {
 
 // SetCallCode sets the code of the contract and address of the backing data
 // object
-func (c *Contract) SetCallCode(addr *common.Address, hash common.Hash, code []byte) {
+func (c *Contract) SetCallCode(addr *common.Address, hash common.Hash, code []byte, ast types.Ast, stateVariables []*types.Node) {
 	c.Code = code
 	c.CodeHash = hash
 	c.CodeAddr = addr
+	c.Ast = ast
+	c.StateVariables = stateVariables
 }

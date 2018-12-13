@@ -8,6 +8,7 @@ import (
 	"github.com/tenderly/tenderly-trace/ethereum/core/state"
 	"github.com/tenderly/tenderly-trace/ethereum/core/vm"
 	"github.com/tenderly/tenderly-trace/ethereum/eth/tracers"
+	"github.com/tenderly/tenderly-trace/source"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -66,7 +67,7 @@ type Trace struct {
 	Trace               []Trace
 }
 
-func (t Tenderly) Trace(txHash string) (*Trace, error) {
+func (t Tenderly) Trace(txHash string, cs source.Source) (*Trace, error) {
 	tx, err := t.client.GetTransaction(txHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed fetching transaction %s, err: %s\n", txHash, err)
@@ -81,10 +82,10 @@ func (t Tenderly) Trace(txHash string) (*Trace, error) {
 		return nil, fmt.Errorf("failed fetcing block %s, err: %s\n", tx.BlockNumber().String(), err)
 	}
 
-	tracer, err := tracers.New("callTracer")
+	tracer, err := tracers.New("callTracerFinal")
 
 	context := buildContext(tx, blockHeader)
-	stateDB := state.New(t.client, blockHeader.Number().Value())
+	stateDB := state.New(t.client, blockHeader.Number().Value(), cs.GetSource())
 	chainConfig := params.TestChainConfig
 	vmConfig := vm.Config{Debug: true, Tracer: tracer}
 

@@ -90,8 +90,8 @@ func (ethSchema) GetCode(address string, block ethereum.Number) (*jsonrpc2.Reque
 	return jsonrpc2.NewRequest("eth_getCode", address, block), &code
 }
 
-func (ethSchema) GetStorage(address string, offset common.Hash, block ethereum.Number) (*jsonrpc2.Request, *common.Hash) {
-	var data common.Hash
+func (ethSchema) GetStorage(address string, offset common.Hash, block ethereum.Number) (*jsonrpc2.Request, *string) {
+	var data string
 
 	return jsonrpc2.NewRequest("eth_getStorageAt", address, offset, block), &data
 }

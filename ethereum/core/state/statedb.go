@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"github.com/tenderly/tenderly-trace/ethereum"
 	"github.com/tenderly/tenderly-trace/ethereum/client"
+	types2 "github.com/tenderly/tenderly-trace/ethereum/core/types"
 	"math/big"
 	"strings"
 	"sync"
@@ -57,6 +58,11 @@ func NewCache() *Cache {
 	}
 }
 
+type ContractSource interface {
+	GetAst(string) types2.Ast
+	GetStateVariables(string) []*types2.Node
+}
+
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -64,6 +70,7 @@ func NewCache() *Cache {
 // * Accounts
 type StateDB struct {
 	client      client.Client
+	source      ContractSource
 	blockNumber int64
 	cache       *Cache
 
@@ -96,10 +103,11 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie.
-func New(client client.Client, blockNumber int64) *StateDB {
+func New(client client.Client, blockNumber int64, source ContractSource) *StateDB {
 	c := NewCache()
 	return &StateDB{
 		client:            client,
+		source:            source,
 		blockNumber:       blockNumber,
 		cache:             c,
 		stateObjectsDirty: make(map[common.Address]struct{}),
@@ -147,6 +155,18 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	return 0
 }
 
+func (self *StateDB) GetCodeAst(addr common.Address) types2.Ast {
+	code := self.GetCode(addr)
+
+	return self.source.GetAst("0x" + hex.EncodeToString(code))
+}
+
+func (self *StateDB) GetStateVariables(addr common.Address) []*types2.Node {
+	code := self.GetCode(addr)
+
+	return self.source.GetStateVariables("0x" + hex.EncodeToString(code))
+}
+
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	codeCache := self.cache.code[addr]
 	if codeCache != nil {
@@ -172,11 +192,8 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 	if codeCache != nil {
 		return len(*codeCache)
 	}
-	code, err := self.client.GetCode(addr.String(), ethereum.Number(self.blockNumber))
-	if err != nil {
-		return 0
-	}
-	return len(*code)
+	code := self.GetCode(addr)
+	return len(code)
 }
 
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
@@ -184,11 +201,9 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	if codeCache != nil {
 		return common.BytesToHash(crypto.Keccak256([]byte(*codeCache)))
 	}
-	code, err := self.client.GetCode(addr.String(), ethereum.Number(self.blockNumber))
-	if err != nil {
-		return common.Hash{}
-	}
-	return common.BytesToHash(crypto.Keccak256([]byte(*code)))
+
+	code := self.GetCode(addr)
+	return common.BytesToHash(crypto.Keccak256(code))
 }
 
 func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Hash {

@@ -1,6 +1,7 @@
 package vm
 
 import (
+	types2 "github.com/tenderly/tenderly-trace/ethereum/core/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,6 +19,8 @@ type StateDB interface {
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
 
+	GetCodeAst(address common.Address) types2.Ast
+	GetStateVariables(address common.Address) []*types2.Node
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte //instructions.go is calling
 	SetCode(common.Address, []byte)

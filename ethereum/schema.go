@@ -23,7 +23,7 @@ type EthSchema interface {
 	GetTransactionReceipt(hash string) (*jsonrpc2.Request, TransactionReceipt)
 	GetBalance(address string, block Number) (*jsonrpc2.Request, *hexutil.Big)
 	GetCode(address string, block Number) (*jsonrpc2.Request, *string)
-	GetStorage(address string, offset common.Hash, block Number) (*jsonrpc2.Request, *common.Hash)
+	GetStorage(address string, offset common.Hash, block Number) (*jsonrpc2.Request, *string)
 }
 
 // Net

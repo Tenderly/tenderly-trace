@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tenderly/tenderly-trace/ethereum/core/vm"
-	"math/big"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -64,7 +63,7 @@ type BlockHeader interface {
 
 type Transaction interface {
 	Hash() *common.Hash
-	BlockNumber() *big.Int
+	BlockNumber() *hexutil.Bytes
 	BlockHash() *common.Hash
 
 	From() *common.Address

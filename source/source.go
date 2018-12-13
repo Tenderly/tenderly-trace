@@ -1,101 +1,141 @@
 package source
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/tenderly/tenderly-trace/ethereum/client"
-	"github.com/tenderly/tenderly-trace/ethereum/core/accounts/signer/core"
-	"github.com/tenderly/tenderly-trace/source/tenderly"
-	"time"
+	"github.com/tenderly/tenderly-trace/ethereum/core/types"
 )
 
-type Ast interface {
-	GetAbsolutePath() string
-	GetExportedSymbols() map[string][]int
-	GetId() int
-	GetNodeType() string
-	GetNodes() interface{}
-	GetSrc() string
+type InstructionMapping struct {
+	Src   string
+	Index int
+
+	Start  int
+	Length int
+
+	Line   int
+	Column int
+
+	FileIndex int
+	Jump      string
 }
 
-type Compiler interface {
-	GetName() string
-	GetVersion() string
-}
-
-type Network interface {
-	GetEvents() interface{}
-	GetLinks() interface{}
-	GetAddress() string
-	GetTransactionHash() string
-}
-
-type Networks interface {
-	GetNetwork(string) Network
-}
+type Ast map[int]*types.Node
+type SourceMap map[int]*InstructionMapping
 
 type Contract interface {
-	GetName() string
-	GetAbi() interface{}
-	GetBytecode() string
-	GetDeployedBytecode() string
-	GetSourceMap() string
-	GetDeployedSourceMap() string
-	GetSource() string
-	GetSourcePath() string
-	GetAst() Ast
-	GetCompiler() Compiler
-	GetNetworks() Networks
-
-	GetSchemaVersion() string
-	GetUpdatedAt() time.Time
+	GetContractAst(sourceMap SourceMap) types.Ast
+	GetContractStateVariables() []*types.Node
+	GetContractSourceMap() (SourceMap, error)
 }
 
 type ContractSource struct {
-	contracts map[string]Contract //mapping address => contract interface
-	client    client.Client
+	Contracts map[string]Contract //mapping code => contract interface
 }
 
-func NewContractSource(contracts map[string]Contract, client client.Client) *ContractSource {
-	return &ContractSource{
-		contracts: contracts,
-		client:    client,
-	}
-}
-
-func (cs ContractSource) GetContract(address string) Contract {
-	if contract, ok := cs.contracts[address]; ok {
-		return contract
+func (cs ContractSource) GetAst(code string) types.Ast {
+	contractCode, ok := cs.Contracts[code]
+	if !ok {
+		return nil
 	}
 
-	deployedBytecode, err := cs.client.GetCode(address)
+	sourceMap, err := contractCode.GetContractSourceMap()
 	if err != nil {
-		// TODO: Log
-		return tenderly.Contract{
-			DeployedBytecode: *deployedBytecode,
-		}
+		return nil
 	}
 
-	for _, c := range cs.contracts {
-		if c.GetDeployedBytecode() == *deployedBytecode {
-			return c
-		}
-	}
-
-	// TODO: Log
-	return tenderly.Contract{
-		DeployedBytecode: *deployedBytecode,
-	}
+	return contractCode.GetContractAst(sourceMap)
 }
 
-func (cs ContractSource) DecodeInput(address string, rawInput hexutil.Bytes) *[]core.DecodedArgument {
-	c := cs.GetContract(address)
-	if c.GetAbi() != nil {
-		if decodedInput, err := core.ParseCallData([]byte(rawInput), c.GetAbi().(string)); err != nil {
-			return nil
-		} else {
-			return &decodedInput.Inputs
-		}
+func (cs ContractSource) GetStateVariables(code string) []*types.Node {
+	contractCode, ok := cs.Contracts[code]
+	if !ok {
+		return nil
 	}
 
-	return nil
+	return contractCode.GetContractStateVariables()
 }
+
+//func (cs ContractSource) GetAst(code string) *state.Variables {
+//	contract := cs.Contracts[code]
+//	if contract == nil {
+//		return nil
+//	}
+//
+//	ast := contract.GetContractAst()
+//
+//	return parseAst(&ast)
+//}
+//
+//func parseAst(ast *Ast) *state.Variables {
+//	if ast == nil {
+//		return nil
+//	}
+//
+//	variables := state.NewVariables()
+//
+//	for _, node := range ast.Nodes {
+//		explore(node, variables)
+//	}
+//
+//	return variables
+//}
+//
+//func explore(node Node, variables *state.Variables) {
+//	if node.Nodes != nil {
+//		for _, childNode := range node.Nodes {
+//			explore(childNode, variables)
+//		}
+//	}
+//
+//	if node.StateVariable {
+//		variables.IsGlobal[node.Name] = true
+//	}
+//}
+
+type Source interface {
+	GetSource() ContractSource
+}
+
+//func NewContractSource(contracts map[string]Contract, client client.Client) *ContractSource {
+//	return &ContractSource{
+//		contracts: contracts,
+//		client:    client,
+//	}
+//}
+//
+//func (cs ContractSource) GetContract(address string) Contract {
+//	if contract, ok := cs.contracts[address]; ok {
+//		return contract
+//	}
+//
+//	deployedBytecode, err := cs.client.GetCode(address)
+//	if err != nil {
+//		// TODO: Log
+//		return tenderly.Contract{
+//			DeployedBytecode: *deployedBytecode,
+//		}
+//	}
+//
+//	for _, c := range cs.contracts {
+//		if c.GetDeployedBytecode() == *deployedBytecode {
+//			return c
+//		}
+//	}
+//
+//	// TODO: Log
+//	return tenderly.Contract{
+//		DeployedBytecode: *deployedBytecode,
+//	}
+//}
+
+//func (cs ContractSource) DecodeInput(address string, rawInput hexutil.Bytes) *[]core.DecodedArgument {
+//	c := cs.GetContract(address)
+//	if c.GetAbi() != nil {
+//		if decodedInput, err := core.ParseCallData([]byte(rawInput), c.GetAbi().(string)); err != nil {
+//			return nil
+//		} else {
+//			return &decodedInput.Inputs
+//		}
+//	}
+//
+//	return nil
+//}

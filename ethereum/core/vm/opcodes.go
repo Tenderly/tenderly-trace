@@ -508,6 +508,333 @@ var stringToOp = map[string]OpCode{
 	"SELFDESTRUCT":   SELFDESTRUCT,
 }
 
+func (op OpCode) OpCodeStackChange(stackPosition int) int {
+	switch op {
+	case SHL:
+		return 1
+	case SHR:
+		return 1
+	case SAR:
+		return 1
+	case STATICCALL:
+		return 5
+	case RETURNDATASIZE:
+		return -1
+	case RETURNDATACOPY:
+		return 3
+	case REVERT:
+		return 2
+	case STOP:
+		return 0
+	case ADD:
+		return 1
+	case MUL:
+		return 1
+	case SUB:
+		return 1
+	case DIV:
+		return 1
+	case SDIV:
+		return 1
+	case MOD:
+		return 1
+	case SMOD:
+		return 1
+	case ADDMOD:
+		return 2
+	case MULMOD:
+		return 2
+	case EXP:
+		return 1
+	case SIGNEXTEND:
+		return 1
+	case LT:
+		return 1
+	case GT:
+		return 1
+	case SLT:
+		return 1
+	case SGT:
+		return 1
+	case EQ:
+		return 1
+	case ISZERO:
+		return 0
+	case AND:
+		return 1
+	case XOR:
+		return 1
+	case OR:
+		return 1
+	case NOT:
+		return 0
+	case BYTE:
+		return 1
+	case SHA3:
+		return 1
+	case ADDRESS:
+		return -1
+	case BALANCE:
+		return 0
+	case ORIGIN:
+		return -1
+	case CALLER:
+		return -1
+	case CALLVALUE:
+		return -1
+	case CALLDATALOAD:
+		return 0
+	case CALLDATASIZE:
+		return -1
+	case CALLDATACOPY:
+		return 3
+	case CODESIZE:
+		return -1
+	case CODECOPY:
+		return 3
+	case GASPRICE:
+		return -1
+	case EXTCODESIZE:
+		return 0
+	case EXTCODECOPY:
+		return 4
+	case BLOCKHASH:
+		return 0
+	case COINBASE:
+		return -1
+	case TIMESTAMP:
+		return -1
+	case NUMBER:
+		return -1
+	case DIFFICULTY:
+		return -1
+	case GASLIMIT:
+		return -1
+	case POP:
+		return 1
+	case MLOAD:
+		return 0
+	case MSTORE:
+		return 2
+	case MSTORE8:
+		return 2
+	case SLOAD:
+		return 0
+	case SSTORE:
+		return 2
+	case JUMP:
+		return 1
+	case JUMPI:
+		return 2
+	case PC:
+		return -1
+	case MSIZE:
+		return -1
+	case GAS:
+		return -1
+	case JUMPDEST:
+		return 0
+	case PUSH1:
+		return -1
+	case PUSH2:
+		return -1
+	case PUSH3:
+		return -1
+	case PUSH4:
+		return -1
+	case PUSH5:
+		return -1
+	case PUSH6:
+		return -1
+	case PUSH7:
+		return -1
+	case PUSH8:
+		return -1
+	case PUSH9:
+		return -1
+	case PUSH10:
+		return -1
+	case PUSH11:
+		return -1
+	case PUSH12:
+		return -1
+	case PUSH13:
+		return -1
+	case PUSH14:
+		return -1
+	case PUSH15:
+		return -1
+	case PUSH16:
+		return -1
+	case PUSH17:
+		return -1
+	case PUSH18:
+		return -1
+	case PUSH19:
+		return -1
+	case PUSH20:
+		return -1
+	case PUSH21:
+		return -1
+	case PUSH22:
+		return -1
+	case PUSH23:
+		return -1
+	case PUSH24:
+		return -1
+	case PUSH25:
+		return -1
+	case PUSH26:
+		return -1
+	case PUSH27:
+		return -1
+	case PUSH28:
+		return -1
+	case PUSH29:
+		return -1
+	case PUSH30:
+		return -1
+	case PUSH31:
+		return -1
+	case PUSH32:
+		return -1
+	case DUP1:
+		return -1
+	case DUP2:
+		return -1
+	case DUP3:
+		return -1
+	case DUP4:
+		return -1
+	case DUP5:
+		return -1
+	case DUP6:
+		return -1
+	case DUP7:
+		return -1
+	case DUP8:
+		return -1
+	case DUP9:
+		return -1
+	case DUP10:
+		return -1
+	case DUP11:
+		return -1
+	case DUP12:
+		return -1
+	case DUP13:
+		return -1
+	case DUP14:
+		return -1
+	case DUP15:
+		return -1
+	case DUP16:
+		return -1
+	case SWAP1:
+		if stackPosition == 0 {
+			return -1
+		}
+		return 0
+	case SWAP2:
+		if stackPosition == 0 {
+			return -2
+		}
+		return 0
+	case SWAP3:
+		if stackPosition == 0 {
+			return -3
+		}
+		return 0
+	case SWAP4:
+		if stackPosition == 0 {
+			return -4
+		}
+		return 0
+	case SWAP5:
+		if stackPosition == 0 {
+			return -5
+		}
+		return 0
+	case SWAP6:
+		if stackPosition == 0 {
+			return -6
+		}
+		return 0
+	case SWAP7:
+		if stackPosition == 0 {
+			return -7
+		}
+		return 0
+	case SWAP8:
+		if stackPosition == 0 {
+			return -8
+		}
+		return 0
+	case SWAP9:
+		if stackPosition == 0 {
+			return -9
+		}
+		return 0
+	case SWAP10:
+		if stackPosition == 0 {
+			return -10
+		}
+		return 0
+	case SWAP11:
+		if stackPosition == 0 {
+			return -11
+		}
+		return 0
+	case SWAP12:
+		if stackPosition == 0 {
+			return -12
+		}
+		return 0
+	case SWAP13:
+		if stackPosition == 0 {
+			return -13
+		}
+		return 0
+	case SWAP14:
+		if stackPosition == 0 {
+			return -14
+		}
+		return 0
+	case SWAP15:
+		if stackPosition == 0 {
+			return -15
+		}
+		return 0
+	case SWAP16:
+		if stackPosition == 0 {
+			return -16
+		}
+		return 0
+	case LOG0:
+		return 2
+	case LOG1:
+		return 3
+	case LOG2:
+		return 4
+	case LOG3:
+		return 5
+	case LOG4:
+		return 6
+	case CREATE:
+		return 2
+	case CALL:
+		return 6
+	case CALLCODE:
+		return 6
+	case RETURN:
+		return 2
+	case SELFDESTRUCT:
+		return 1
+	default:
+		return 0
+	}
+}
+
 func StringToOp(str string) OpCode {
 	return stringToOp[str]
 }

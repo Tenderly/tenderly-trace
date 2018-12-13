@@ -30,7 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
+	"gopkg.in/olebedev/go-duktape.v3"
 )
 
 // bigIntegerJS is the minified version of https://github.com/peterolson/BigInteger.js.
@@ -57,6 +57,17 @@ func popSlice(ctx *duktape.Context) []byte {
 	blob := common.CopyBytes(makeSlice(ctx.GetBuffer(-1)))
 	ctx.Pop()
 	return blob
+}
+
+// popBigInt pops a JavaScript BigInteger from the VM.
+func popBigInt(ctx *duktape.Context) string {
+	string := ctx.GetString(-1)
+	n := new(big.Int)
+	n, ok := n.SetString(fmt.Sprintf("%064s", string), 10)
+	if !ok {
+		return ""
+	}
+	return common.BigToAddress(n).String()[2:]
 }
 
 // pushBigInt create a JavaScript BigInteger in the VM.
@@ -329,6 +340,11 @@ func New(code string) (*Tracer, error) {
 		ctx.PushString(hexutil.Encode(popSlice(ctx)))
 		return 1
 	})
+	tracer.vm.PushGlobalGoFunction("stringToHex", func(ctx *duktape.Context) int {
+		string := popBigInt(ctx)
+		ctx.PushString(string)
+		return 1
+	})
 	tracer.vm.PushGlobalGoFunction("toWord", func(ctx *duktape.Context) int {
 		var word common.Hash
 		if ptr, size := ctx.GetBuffer(-1); ptr != nil {
@@ -432,6 +448,29 @@ func New(code string) (*Tracer, error) {
 
 	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.pcValue); return 1 })
 	tracer.vm.PutPropString(logObject, "getPC")
+
+	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int {
+		pc := uint(ctx.GetInt(-1))
+		ast := tracer.contractWrapper.contract.ContractAst(pc)
+		ctx.Pop()
+		ctx.PushString(string(ast))
+		return 1
+	})
+	tracer.vm.PutPropString(logObject, "getAst")
+
+	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int {
+		sv := tracer.contractWrapper.contract.ContractStateVariables()
+		ctx.PushString(string(sv))
+		return 1
+	})
+	tracer.vm.PutPropString(logObject, "getStateVariables")
+
+	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int {
+		stackPosition := ctx.GetInt(-1)
+		ctx.PushInt(tracer.opWrapper.op.OpCodeStackChange(stackPosition))
+		return 1
+	})
+	tracer.vm.PutPropString(logObject, "getOpCodeStackChange")
 
 	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.gasValue); return 1 })
 	tracer.vm.PutPropString(logObject, "getGas")

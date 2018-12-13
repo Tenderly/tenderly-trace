@@ -187,7 +187,8 @@ func (c *Client) GetStorageAt(hash string, offset common.Hash, block ethereum.Nu
 		return nil, fmt.Errorf("get transaction receipt [%s]: %s", hash, err)
 	}
 
-	return resp, nil
+	respHash := common.HexToHash(*resp)
+	return &respHash, nil
 }
 
 func (c *Client) Subscribe(forcePoll bool) (chan int64, error) {

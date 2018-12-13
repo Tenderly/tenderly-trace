@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tenderly/tenderly-trace/ethereum"
 	"github.com/tenderly/tenderly-trace/ethereum/core/vm"
-	"math/big"
 )
 
 // Core Types
@@ -83,7 +82,7 @@ type Transaction struct {
 	ValueValue       *hexutil.Big    `json:"value"`
 	ValueGas         *hexutil.Big    `json:"gas"`
 	ValueGasPrice    *hexutil.Big    `json:"gasPrice"`
-	ValueBlockNumber *hexutil.Big    `json:"blockNumber"`
+	ValueBlockNumber *hexutil.Bytes  `json:"blockNumber"`
 	ValueBlockHash   *common.Hash    `json:"blockHash"`
 }
 
@@ -115,8 +114,8 @@ func (t *Transaction) GasPrice() *hexutil.Big {
 	return t.ValueGasPrice
 }
 
-func (t *Transaction) BlockNumber() *big.Int {
-	return t.ValueBlockNumber.ToInt()
+func (t *Transaction) BlockNumber() *hexutil.Bytes {
+	return t.ValueBlockNumber
 }
 
 func (t *Transaction) BlockHash() *common.Hash {
