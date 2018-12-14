@@ -17,7 +17,7 @@ func main() {
 		log.Fatalf("Unable to fetch truffle build folder")
 	}
 
-	tenderly.Trace("0xaffd08e661e19777af1adfa24925b0e5e5adf22c31f66c7d0fa079e7e3a2189c", truffleContractSource)
+	tenderly.Trace("0x18de3b6d85d5b9c8491a1c02ebe7d05d979bcf9162a16f161a0d36eef82640cb", truffleContractSource)
 }
 
 //package main

@@ -9,7 +9,7 @@ type TempAst map[string]*types.Node
 
 func ParseAst(contract *Contract, sourceMap source.SourceMap) types.Ast {
 	tast := make(TempAst)
-	recursiveParseAst(tast, contract.Ast.Nodes)
+	recursiveNodeParse(tast, contract.Ast.Nodes)
 
 	ast := make(types.Ast)
 
@@ -24,7 +24,7 @@ func ParseAst(contract *Contract, sourceMap source.SourceMap) types.Ast {
 
 func ParseStateVariables(contract *Contract) []*types.Node {
 	tast := make(TempAst)
-	recursiveParseAst(tast, contract.Ast.Nodes)
+	recursiveNodeParse(tast, contract.Ast.Nodes, contract.Name)
 
 	var sv []*types.Node
 
@@ -37,26 +37,27 @@ func ParseStateVariables(contract *Contract) []*types.Node {
 	return sv
 }
 
-func recursiveParseAst(tast TempAst, nodes []Node) TempAst {
+func recursiveNodeParse(tast TempAst, nodes []Node, contractName ...string) TempAst {
 	for _, node := range nodes {
 		tast[node.Src] = convert(node)
 
-		if node.Nodes != nil {
-			recursiveParseAst(tast, node.Nodes)
-		}
+		if len(contractName) == 0 || (len(contractName) > 0 && (node.ContractKind == "" || (node.ContractKind == "contract" && node.Name == contractName[0]))) {
+			if node.Nodes != nil {
+				recursiveNodeParse(tast, node.Nodes, contractName...)
+			}
 
-		if node.Parameters.Parameters != nil {
-			recursiveParseAst(tast, node.Parameters.Parameters)
-		}
+			if node.Parameters.Parameters != nil {
+				recursiveNodeParse(tast, node.Parameters.Parameters, contractName...)
+			}
 
-		if node.ReturnParameters.Parameters != nil {
-			recursiveParseAst(tast, node.ReturnParameters.Parameters)
-		}
+			if node.ReturnParameters.Parameters != nil {
+				recursiveNodeParse(tast, node.ReturnParameters.Parameters, contractName...)
+			}
 
-		if node.Body.Statements != nil {
-
-			for _, statement := range node.Body.Statements {
-				recursiveParseAst(tast, statement.Declarations)
+			if node.Body.Statements != nil {
+				for _, statement := range node.Body.Statements {
+					recursiveNodeParse(tast, statement.Declarations, contractName...)
+				}
 			}
 		}
 	}

@@ -47,14 +47,14 @@ var (
 type Cache struct {
 	balance map[common.Address]*big.Int
 	code    map[common.Address]*[]byte
-	state   map[common.Address][]byte
+	state   map[common.Address]map[common.Hash]common.Hash
 }
 
 func NewCache() *Cache {
 	return &Cache{
 		balance: make(map[common.Address]*big.Int),
 		code:    make(map[common.Address]*[]byte),
-		state:   make(map[common.Address][]byte),
+		state:   make(map[common.Address]map[common.Hash]common.Hash),
 	}
 }
 
@@ -184,6 +184,7 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	if err != nil {
 		return []byte{}
 	}
+	self.SetCode(addr, bin)
 	return bin
 }
 
@@ -207,8 +208,16 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Hash {
-	data, _ := self.client.GetStorageAt(addr.String(), bhash, ethereum.Number(self.blockNumber))
+	if self.cache.state[addr] == nil {
+		self.cache.state[addr] = make(map[common.Hash]common.Hash)
+	}
+	stateCache := self.cache.state[addr]
+	if hash, ok := stateCache[bhash]; ok {
+		return hash
+	}
+	data, _ := self.client.GetStorageAt(addr.String(), bhash, ethereum.Number(self.blockNumber-1))
 	if data != nil {
+		self.SetState(addr, bhash, *data)
 		return *data
 	}
 	return common.Hash{}
@@ -248,6 +257,10 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 
 func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
+	if self.cache.state[addr] == nil {
+		self.cache.state[addr] = make(map[common.Hash]common.Hash)
+	}
+	self.cache.state[addr][key] = value
 }
 
 // Suicide marks the given account as suicided.

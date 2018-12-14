@@ -25,6 +25,8 @@
     jumpdestInitFunction: [],
     jumpdestInitInternal: false,
     localVariables:[],
+    stateVariablesInitiated: [],
+    stateVariables:[],
     prevPC: 0,
 
     // descended tracks whether we've just descended from an outer transaction into
@@ -40,6 +42,36 @@
         if (error !== undefined) {
             this.fault(log, db);
             return;
+        }
+
+        if (!this.stateVariablesInitiated[toHex(log.contract.getAddress())]) {
+            this.stateVariables[toHex(log.contract.getAddress())] = []
+            var svJson = log.getStateVariables();
+            if (svJson != "null") {
+                var sv = JSON.parse(svJson);
+            }
+
+            var index = 0;
+            for (var i = 0; i < sv.length; i++) {
+                switch (sv[i].typeName.typeDescription.typeIdentifier) {
+                    case "t_uint256":
+                        this.stateVariables[toHex(log.contract.getAddress())].push({
+                            name: sv[i].name,
+                            value: toHex(log.db.getState(log.contract.getAddress(), index)),
+                            index: index,
+                        });
+                        index++;
+                        break;
+                }
+            }
+
+            this.stateVariablesInitiated[toHex(log.contract.getAddress())] = true;
+
+        } else {
+            for (var i = 0; i < this.stateVariables[toHex(log.contract.getAddress())].length; i++) {
+                var index = this.stateVariables[toHex(log.contract.getAddress())][i].index;
+                this.stateVariables[toHex(log.contract.getAddress())][i].value = toHex(log.db.getState(log.contract.getAddress(), index));
+            }
         }
 
         // go thought current contract and method, not all of them
@@ -87,6 +119,7 @@
                 call.output = output;
                 call.decodedOutput = decodedOutput;
                 call.locals = this.localVariables[toHex(log.contract.getAddress())][call.func];
+                call.stateVariables = JSON.parse(JSON.stringify(this.stateVariables[toHex(log.contract.getAddress())]));
                 if (this.jumpdestInitFunction[toHex(log.contract.getAddress())] == pc) {
                     this.callstack.push(call)
                 } else {
@@ -111,6 +144,7 @@
                 this.callstack[0].output = output;
                 this.callstack[0].decodedOutput = decodedOutput;
                 this.callstack[0].locals = this.localVariables[toHex(log.contract.getAddress())][ast.name];
+                this.callstack[0].stateVariables = JSON.parse(JSON.stringify(this.stateVariables[toHex(log.contract.getAddress())]));
             }
         } else if (ast != null) {
             if (op == "JUMPDEST" && pc > 100) { // ugly :(
@@ -302,6 +336,8 @@
             if (call.gas !== undefined) {
                 call.gas = '0x' + bigInt(call.gas).toString(16);
             }
+
+            call.stateVariables = JSON.parse(JSON.stringify(this.stateVariables[call.to]));
             // Inject the call into the previous one
             var left = this.callstack.length;
             if (this.callstack[left - 1].calls === undefined) {
@@ -359,6 +395,7 @@
             gasUsed: '0x' + bigInt(ctx.gasUsed).toString(16),
             input: '0x' + this.callstack[0].input,
             decodedInput: this.callstack[0].decodedInput,
+            stateVariables: this.callstack[0].stateVariables,
             parentLocals: [],
             locals: this.callstack[0].locals,
             output: toHex(ctx.output),
@@ -396,6 +433,7 @@
             gasUsed: call.gasUsed,
             input: call.input,
             decodedInput: call.decodedInput,
+            stateVariables: call.stateVariables,
             locals: call.locals,
             parentLocals: call.parentLocals,
             output: call.output,

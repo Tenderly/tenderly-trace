@@ -443,6 +443,9 @@ func New(code string) (*Tracer, error) {
 	tracer.memoryWrapper.pushObject(tracer.vm)
 	tracer.vm.PutPropString(logObject, "memory")
 
+	tracer.dbWrapper.pushObject(tracer.vm)
+	tracer.vm.PutPropString(logObject, "db")
+
 	tracer.contractWrapper.pushObject(tracer.vm)
 	tracer.vm.PutPropString(logObject, "contract")
 
