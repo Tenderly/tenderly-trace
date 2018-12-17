@@ -24,6 +24,7 @@
     jumpdestMethod:[],
     jumpdestInitFunction: [],
     jumpdestInitInternal: false,
+    jumpdestInit: true,
     localVariables:[],
     stateVariablesInitiated: [],
     stateVariables:[],
@@ -42,6 +43,10 @@
         if (error !== undefined) {
             this.fault(log, db);
             return;
+        }
+
+        if (this.jumpdestMethod[toHex(log.contract.getAddress())] == null) {
+            this.jumpdestMethod[toHex(log.contract.getAddress())] = []
         }
 
         if (!this.stateVariablesInitiated[toHex(log.contract.getAddress())]) {
@@ -93,8 +98,8 @@
             var ast = JSON.parse(astJson);
         }
 
-        if ((this.jumpdestMethod[pc] != null && ast == null) || this.jumpdestInitFunction[toHex(log.contract.getAddress())] == pc) {
-            ast = this.jumpdestMethod[pc];
+        if ((this.jumpdestMethod[toHex(log.contract.getAddress())][pc] != null && ast == null) || this.jumpdestInitFunction[toHex(log.contract.getAddress())] == pc) {
+            ast = this.jumpdestMethod[toHex(log.contract.getAddress())][pc];
 
             var output = "";
             var decodedOutput = [];
@@ -118,7 +123,7 @@
                 call = this.callstack.pop();
                 call.output = output;
                 call.decodedOutput = decodedOutput;
-                call.locals = this.localVariables[toHex(log.contract.getAddress())][call.func];
+                call.locals = JSON.parse(JSON.stringify(this.localVariables[toHex(log.contract.getAddress())][call.func]));
                 call.stateVariables = JSON.parse(JSON.stringify(this.stateVariables[toHex(log.contract.getAddress())]));
                 if (this.jumpdestInitFunction[toHex(log.contract.getAddress())] == pc) {
                     this.callstack.push(call)
@@ -143,7 +148,7 @@
             } else {
                 this.callstack[0].output = output;
                 this.callstack[0].decodedOutput = decodedOutput;
-                this.callstack[0].locals = this.localVariables[toHex(log.contract.getAddress())][ast.name];
+                this.callstack[0].locals = JSON.parse(JSON.stringify(this.localVariables[toHex(log.contract.getAddress())][ast.name]));
                 this.callstack[0].stateVariables = JSON.parse(JSON.stringify(this.stateVariables[toHex(log.contract.getAddress())]));
             }
         } else if (ast != null) {
@@ -168,38 +173,40 @@
                     }
 
                     if (this.jumpdestInit) {
-                        var call = this.callstack.pop();
+                        if (this.callstack.length == 0) {
+                            var call = {
+                                to: toHex(log.contract.getAddress()),
+                                gasIn: log.getGas(),
+                                gasCost: log.getCost(),
+                                type: "CALL",
+                            };
+                        } else {
+                            var call = this.callstack.pop();
+                        }
                         call.pc = pc;
                         call.func = ast.name;
                         call.input = input;
                         call.decodedInput = decodedInput;
                         this.jumpdestInitFunction[toHex(log.contract.getAddress())] = this.prevPC + 1;
+                        this.methodDepth[toHex(log.contract.getAddress())] = 0;
                     } else {
                         var call = {
                             pc: pc,
                             func: ast.name,
-                            type: op,
+                            type: "JUMPDEST",
                             from: toHex(log.contract.getAddress()),
                             to: toHex(log.contract.getAddress()),
                             input: input,
                             decodedInput: decodedInput,
                             gasIn: log.getGas(),
                             gasCost: log.getCost(),
+                            parentLocals: JSON.parse(JSON.stringify(this.localVariables[toHex(log.contract.getAddress())][this.callstack[this.callstack.length - 1].func])),
                         };
-
-                        if (this.methodDepth[toHex(log.contract.getAddress())] != null) {
-                            this.methodDepth[toHex(log.contract.getAddress())]++;
-                            call.parentLocals = JSON.parse(JSON.stringify(this.localVariables[toHex(log.contract.getAddress())][this.callstack[this.callstack.length - 1].func]));
-                        } else {
-                            this.methodDepth[toHex(log.contract.getAddress())] = 0;
-                            call.type = "CALL";
-                            this.jumpdestInitFunction[toHex(log.contract.getAddress())] = this.prevPC + 1;
-                        }
-
+                        this.methodDepth[toHex(log.contract.getAddress())]++;
                     }
 
                     this.jumpdestInit = false;
-                    this.jumpdestMethod[this.prevPC + 1] = ast;
+                    this.jumpdestMethod[toHex(log.contract.getAddress())][this.prevPC + 1] = ast;
                     this.callstack.push(call);
 
                     if (this.localVariables[toHex(log.contract.getAddress())] == null) {
@@ -297,6 +304,7 @@
         // If an existing call is returning, pop off the call stack
         if (syscall && op == 'REVERT') {
             this.callstack[this.callstack.length - 1].error = "execution reverted";
+            this.callstack[this.callstack.length - 1].errorPC = pc;
             return;
         }
 
@@ -316,6 +324,7 @@
                     call.output = toHex(db.getCode(toAddress(ret.toString(16))));
                 } else if (call.error === undefined) {
                     call.error = "internal failure"; // TODO(karalabe): surface these faults somehow
+                    call.errorPC = pc; // TODO(karalabe): surface these faults somehow
                 }
             } else {
                 // If the call was a contract call, retrieve the gas usage and output
@@ -326,6 +335,7 @@
                         call.output = toHex(log.memory.slice(call.outOff, call.outOff + call.outLen));
                     } else if (call.error === undefined) {
                         call.error = "internal failure"; // TODO(karalabe): surface these faults somehow
+                        call.errorPC = pc;
                     }
                 }
                 delete call.gasIn;
@@ -358,6 +368,7 @@
         // Pop off the just failed call
         var call = this.callstack.pop();
         call.error = log.getError();
+        call.errorPC = log.getPC();
 
         // Consume all available gas and clean any leftovers
         if (call.gas !== undefined) {
@@ -387,6 +398,7 @@
     result: function (ctx, db) {
         var result = {
             pc: this.callstack[0].pc,
+            func: this.callstack[0].func,
             type: this.callstack[0].type,
             from: toHex(ctx.from),
             to: toHex(ctx.to),
@@ -400,6 +412,8 @@
             locals: this.callstack[0].locals,
             output: toHex(ctx.output),
             decodedOutput: this.callstack[0].decodedOutput,
+            error: this.callstack[0].error,
+            errorPC: this.callstack[0].errorPC,
             time: ctx.time,
         };
         if (this.callstack[0].calls !== undefined) {
@@ -407,6 +421,7 @@
         }
         if (this.callstack[0].error !== undefined) {
             result.error = this.callstack[0].error;
+            result.errorPC = this.callstack[0].errorPC;
         } else if (ctx.error !== undefined) {
             result.error = ctx.error;
         }
@@ -423,8 +438,7 @@
     finalize: function (call) {
         var sorted = {
             pc: call.pc,
-            pcs: call.pcs,
-            ast: call.ast,
+            func: call.func,
             type: call.type,
             from: call.from,
             to: call.to,
@@ -439,6 +453,7 @@
             output: call.output,
             decodedOutput: call.decodedOutput,
             error: call.error,
+            errorPC: call.errorPC,
             time: call.time,
             calls: call.calls,
         }
